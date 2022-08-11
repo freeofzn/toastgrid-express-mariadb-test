@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="js/tui-grid/dist/tui-grid.css" />
+    <script src="js/tui-grid/dist/tui-grid.js"></script>
+    <title>tui test</title>
+  </head>
+  <body>
+    <input type="text" id="search-text" placeholder="검색어를 입력하세요" />
+    <button id="btn-select-grid" name="button">조회</button>
+    <button id="btn-add-row" name="button">추가</button>
+    <button id="btn-del-row" name="button">삭제</button>
+    <button id="btn-save-grid">저장</button>
+    <div id="grid"></div>
+    <script>
+      document.querySelector("#search-text").addEventListener("keyup", (ev) => {
+        if (ev.key == "Enter") {
+          selectGrid();
+        }
+      });
+      document.querySelector("#btn-select-grid").addEventListener("click", (ev) => {
+        selectGrid();
+      });
+      document.querySelector("#btn-add-row").addEventListener("click", (ev) => {
+        addRow();
+      });
+      document.querySelector("#btn-del-row").addEventListener("click", (ev) => {
+        delRow();
+      });
+      document.querySelector("#btn-save-grid").addEventListener("click", (ev) => {
+        saveGrid();
+      });
+
+      const tuiGrid1 = new tui.Grid({
+        el: document.getElementById("grid"),
+        //editingEvent: "click", // 디폴트: 더블클릭시 edit 모드로 변경
+        columns: [
+          {
+            header: "번호",
+            name: "SEQ",
+            width: 30,
+            //hidden: true,
+          },
+          {
+            header: "제목",
+            name: "TITLE",
+            editor: "text",
+            width: 300,
+            validation: {
+              required: true,
+            },
+          },
+          {
+            header: "내용",
+            name: "CONTENT",
+            editor: "text",
+          },
+        ],
+      });
+
+      /**
+       * 조회
+       */
+      async function selectGrid() {
+        const SEARCH_TEXT = document.querySelector("#search-text").value;
+        const query = new URLSearchParams({ SEARCH_TEXT });
+        const res = await fetch(`http://localhost:3000/select-list?${query}`);
+        const resJSON = await res.json();
+        tuiGrid1.resetData(resJSON);
+      }
+
+      /**
+       * 행추가
+       */
+      function addRow() {
+        var defaultRowData = { SEQ: "채번" }; // row 디폴트 값
+        tuiGrid1.appendRow(defaultRowData, { at: 0, focus: true });
+        tuiGrid1.focus(tuiGrid1.getFocusedCell().rowKey, "TITLE");
+      }
+
+      /**
+       * 행삭제
+       */
+      function delRow() {
+        var rowKey = tuiGrid1.getFocusedCell().rowKey;
+        tuiGrid1.blur(); // combo 선택후 삭제시 에러 방지
+        tuiGrid1.removeRow(rowKey);
+      }
+
+      /**
+       * 저장
+       */
+      async function saveGrid() {
+        tuiGrid1.blur(); // 편집중인 cell focus 제거 -> 값 반영
+
+        // validation
+        var errMsg = "";
+        var validates = tuiGrid1.validate();
+        if (validates.length > 0) {
+          validates.forEach((element) => {
+            var col = tuiGrid1.getColumn(element.errors[0].columnName).header;
+            var err = element.errors[0].errorCode[0];
+            errMsg += `컬럼:${col}, 에러코드:${err}\n`;
+          });
+          alert("값을 확인해 주세요. \n" + errMsg);
+          return;
+        }
+
+        let modRows = tuiGrid1.getModifiedRows(); // 수정된 rows
+        // let modRows = {
+        //   createdRows: [
+        //     { TITLE: "111", CONTENT: "222" },
+        //     { TITLE: "333", CONTENT: "444" },
+        //   ],
+        //   updatedRows: [],
+        //   deletedRows: [],
+        // };
+
+        const res = await fetch(`http://localhost:3000/save-list`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ modifiedRows: modRows }),
+        });
+
+        const resJSON = await res.json();
+        alert(resJSON);
+        selectGrid();
+      }
+
+      selectGrid();
+    </script>
+  </body>
+</html>
