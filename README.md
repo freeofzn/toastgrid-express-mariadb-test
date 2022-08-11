@@ -5,6 +5,6 @@
 
 ## 환경구성
 
-- front : JavaScript, ToastGrid
+- front : JavaScript, ToastGrid(<https://ui.toast.com/tui-grid>)
 - back : express
 - DB : mariadb
